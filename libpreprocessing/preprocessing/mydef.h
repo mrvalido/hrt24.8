@@ -8,30 +8,28 @@
 #ifndef LIBPREPROCESSING_PREPROCESSING_MYDEF_H_
 #define LIBPREPROCESSING_PREPROCESSING_MYDEF_H_
 
-#define XC 1024 // center coordinate of CCD
-#define YC 1024 // center coordinate of CCD
+#define ROWS 1024
+#define COLS 1024
 
-#define WIDTH_RADIO 8 //ancho del aro del circulo en pixels
-
-#define ROWS 2048
-#define COLS 2048
-
-#define STEP_HOUGH 1.0
-#define CENTER_DIST 100 //
-#define STEP_RADIO 1
-#define LMAX_ROWS WIDTH_RADIO/STEP_RADIO //Numbers o terna
-#define LMAX_COLS 3 				//x, y ,maxvalues
+#define XC (ROWS/2) // center coordinate of CCD
+#define YC (COLS/2) // center coordinate of CCD
 
 #define NUMBER_OF_IMAGES 9
 
-#define IMIN 	0 << FP32_FWL
-#define IMAX  	82000 << FP32_FWL
-#define LOOPS_ITERA 10
+#define WINDOW_WIDTH 10
+#define WINDOW_HEIGHT 10
+
+#define XL (XC-WINDOW_WIDTH/2)
+#define XH (XC+WINDOW_WIDTH/2)
+#define YL (YC-WINDOW_HEIGHT/2)
+#define YH (YC+WINDOW_HEIGHT/2)
+
+#define RW (ROWS-WINDOW_WIDTH+1)
+#define RH (COLS-WINDOW_HEIGHT+1)
+
+#define COORDS_COLS 2
 
 #define MASK_INDEX  NUMBER_OF_IMAGES
-#define DISP_INDEX 	(MASK_INDEX + 1)
-#define DISP_ROWS   NUMBER_OF_IMAGES
-#define DISP_COLS	2
 
 #define CHECK_STATUS(x) 	if((status = x ) != PREPROCESSING_SUCCESSFUL){ printf("Status Error\n");  return status;}
 

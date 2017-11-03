@@ -7,7 +7,7 @@ C_SRCS += \
 ../libpreprocessing/FITS_Interface.c \
 ../libpreprocessing/ana.c \
 ../libpreprocessing/arith.c \
-../libpreprocessing/flatfield.c \
+../libpreprocessing/hrt.c \
 ../libpreprocessing/main.c \
 ../libpreprocessing/vmem.c 
 
@@ -15,7 +15,7 @@ OBJS += \
 ./libpreprocessing/FITS_Interface.o \
 ./libpreprocessing/ana.o \
 ./libpreprocessing/arith.o \
-./libpreprocessing/flatfield.o \
+./libpreprocessing/hrt.o \
 ./libpreprocessing/main.o \
 ./libpreprocessing/vmem.o 
 
@@ -23,7 +23,7 @@ C_DEPS += \
 ./libpreprocessing/FITS_Interface.d \
 ./libpreprocessing/ana.d \
 ./libpreprocessing/arith.d \
-./libpreprocessing/flatfield.d \
+./libpreprocessing/hrt.d \
 ./libpreprocessing/main.d \
 ./libpreprocessing/vmem.d 
 

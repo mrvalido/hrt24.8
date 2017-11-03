@@ -6,11 +6,6 @@
 #include "preprocessing/vmem.h"
 #include "preprocessing/ana.h"
 #include "preprocessing/arith.h"
-#include "preprocessing/flatfield.h"
-
-
-
-/* from libeve */
 #include "../libeve/eve/fixed_point.h"
 
 /* from std c */
@@ -20,6 +15,7 @@
 #include <string.h>
 
 #include "FITS_Interface.h"
+#include "preprocessing/hrt.h"
 
 void writeImageToFile(int32_t *img, char *fileName, int positionIndex,  int index, uint32_t stdimagesize ){
 	FILE *fp;
@@ -58,8 +54,6 @@ int main()
 	int32_t *SDRAM;
 	int32_t *img01;
 	int32_t *img02;
-	int32_t *disp;
-	int32_t *mean;
 	int32_t *masks;
 	int32_t *cons;
 	int32_t *pixCon;
@@ -71,8 +65,6 @@ int main()
 	int32_t *tmp6;
 
 	uint32_t stdimagesize=ROWS*COLS;
-	uint32_t stdDispSize = DISP_ROWS*DISP_COLS;
-	uint32_t stdMeanSize = 1;
 	uint32_t numberOfMemoryInput = 16;
 
 	int status = PREPROCESSING_SUCCESSFUL;
@@ -102,54 +94,44 @@ int main()
 	uint32_t 	img02Size = stdimagesize;
 	uint32_t 	img02DatasetId = 2;
 
-	uint32_t  dispSdram = img02Sdram + img02Size;
-	uint32_t	dispSize  = stdDispSize;
-	uint32_t	dispDatasetId = 3;
-
-	uint32_t	meanSdram = dispSdram + dispSize;
-	uint32_t	meanSize  = stdMeanSize;
-	uint32_t	meanDatasetId = 4;
-
-	uint32_t	masksSdram = meanSdram + meanSize;
+	uint32_t	masksSdram = img02Sdram + img02Size;
 	uint32_t	masksSize = stdimagesize;
-	uint32_t	masksDatasetId = 5;
+	uint32_t	masksDatasetId = 3;
 
 	uint32_t	consSdram = masksSdram + masksSize;
 	uint32_t	consSize = stdimagesize;
-	uint32_t	consDatasetId = 6;
+	uint32_t	consDatasetId = 4;
 
 	uint32_t	pixConSdram = consSdram + consSize;
 	uint32_t	pixConSize = stdimagesize;
-	uint32_t	pixConDatasetId = 7;
+	uint32_t	pixConDatasetId = 5;
 
 	uint32_t	tmp1Sdram = pixConSdram + pixConSize;
 	uint32_t	tmp1Size = stdimagesize;
-	uint32_t	tmp1DatasetId = 8;
+	uint32_t	tmp1DatasetId = 6;
 
 	uint32_t	tmp2Sdram = tmp1Sdram + tmp1Size;
 	uint32_t	tmp2Size = stdimagesize;
-	uint32_t	tmp2DatasetId = 9;
+	uint32_t	tmp2DatasetId = 7;
 
 	uint32_t	tmp3Sdram = tmp2Sdram + tmp2Size;
 	uint32_t	tmp3Size = stdimagesize;
-	uint32_t	tmp3DatasetId = 10;
+	uint32_t	tmp3DatasetId = 8;
 
 	uint32_t	tmp4Sdram = tmp3Sdram + tmp3Size;
 	uint32_t	tmp4Size = stdimagesize;
-	uint32_t	tmp4DatasetId = 11;
+	uint32_t	tmp4DatasetId = 9;
 
 	uint32_t	tmp5Sdram = tmp4Sdram + tmp4Size;
 	uint32_t	tmp5Size = stdimagesize;
-	uint32_t	tmp5DatasetId = 12;
+	uint32_t	tmp5DatasetId = 10;
 
 	uint32_t	tmp6Sdram = tmp5Sdram + tmp5Size;
 	uint32_t	tmp6Size = stdimagesize;
-	uint32_t	tmp6DatasetId = 13;
+	uint32_t	tmp6DatasetId = 11;
 
 	img01=(SDRAM+img01Sdram);
 	img02=(SDRAM+img02Sdram);
-	disp=(SDRAM+dispSdram);
-	mean=(SDRAM+meanSdram);
 	masks=(SDRAM+masksSdram);
 	cons=(SDRAM+consSdram);
 	pixCon=(SDRAM+pixConSdram);
@@ -163,8 +145,6 @@ int main()
 	preprocessing_vmem_setEntry(img01Sdram, img01Size, img01DatasetId, img01);
 	preprocessing_vmem_setEntry(img02Sdram, img02Size, img02DatasetId, img02);
 
-	preprocessing_vmem_setEntry(dispSdram, dispSize, dispDatasetId, disp);
-	preprocessing_vmem_setEntry(meanSdram, meanSize, meanDatasetId, mean);
 	preprocessing_vmem_setEntry(masksSdram, masksSize, masksDatasetId, masks);
 	preprocessing_vmem_setEntry(consSdram, consSize, consDatasetId, cons);
 	preprocessing_vmem_setEntry(pixConSdram, pixConSize, pixConDatasetId, pixCon);
@@ -187,99 +167,40 @@ int main()
 	createNANDFLASH(NANDFLASH, entriesOfNAND, stdimagesize, NUMBER_OF_IMAGES);
 	//END NAND FLASH Memory
 
+	int xO, yO;
+	readNAND(entriesOfNAND[0], ROWS, COLS, img01Sdram);
+	CHECK_STATUS(preprocessing_template(img01Sdram, ROWS, COLS, XL, XH, YL, YH, tmp1Sdram))
+	writeImageToFile(tmp1, "template.fits", -1, 0, stdimagesize );
+	for(unsigned short i = 0; i < NUMBER_OF_IMAGES; i++) {
+			printf("Calculating image %d...\n", i);
+			readNAND(entriesOfNAND[i], ROWS, COLS, img01Sdram);
+			CHECK_STATUS(preprocessing_xCorr(img01Sdram, tmp1Sdram, ROWS, COLS, tmp2Sdram))
+			writeImageToFile(tmp2, "myXcoor0.fits", 7, i, stdimagesize );
+			CHECK_STATUS(preprocessing_minimumValue(tmp2Sdram, ROWS, COLS, i, tmp3Sdram))
+			CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp2Sdram))
 
-	printf("Read Disp from NAND to VRAM\n");
-	readNAND(entriesOfNAND[DISP_INDEX], DISP_ROWS, DISP_COLS, dispSdram);
-
-	//Create Mask of all images
-	printf("Creating mask of all images\n");
-	readNAND(entriesOfNAND[MASK_INDEX], ROWS, COLS, masksSdram);
-	for(int i=0; i < NUMBER_OF_IMAGES; i++){
-		readNAND(entriesOfNAND[i], ROWS, COLS, img01Sdram);
-		CHECK_STATUS(preprocessing_arith_maskImagesLog10(img01Sdram, ROWS, COLS, i, IMIN, IMAX, masksSdram))
-	    writeNAND(img01Sdram, ROWS, COLS, entriesOfNAND[i]);
-	}
-
-	printf("Mask created successfully!\n");
-
-
-	//CONST
-	printf("\n------------------------------------------------\n");
-	printf("---------------Calculating Const---------------\n");
-	printf("------------------------------------------------\n");
-	unsigned int sizeDisp = DISP_ROWS * DISP_COLS;
-	unsigned int piq = 0;
-	unsigned int pir = 0;
-
-	for(unsigned short iq = 1; iq < NUMBER_OF_IMAGES; iq++) {
-		printf("--------------------------\n");
-		printf("Calculate image %d with:\n", iq);
-		printf("--------------------------\n");
-		readNAND(entriesOfNAND[iq], ROWS, COLS, img01Sdram);
-
-			for(unsigned short ir = 0; ir < iq; ir++) {
-				printf("\t -Image %d\n", ir);
-
-				readNAND(entriesOfNAND[ir], ROWS, COLS, img02Sdram);
-
-				//Calculate point
-				piq = iq*DISP_COLS;
-				pir = ir*DISP_COLS;
-
-				// Check for valid pointer position.
-				PREPROCESSING_DEF_CHECK_POINTER(disp, piq, sizeDisp);
-				PREPROCESSING_DEF_CHECK_POINTER(disp, piq+1, sizeDisp);
-				PREPROCESSING_DEF_CHECK_POINTER(disp, pir, sizeDisp);
-				PREPROCESSING_DEF_CHECK_POINTER(disp, pir+1, sizeDisp);
-
-				//Calculate Disp
-				int dy = (int)eve_fp_subtract32(disp[piq], disp[pir])/FP32_BINARY_TRUE;
-				int dx = (int)eve_fp_subtract32(disp[piq + 1], disp[pir + 1])/FP32_BINARY_TRUE;
-
-				//Calculate mask of each image
-				CHECK_STATUS(preprocessing_getMask(masksSdram, ROWS, COLS, iq, tmp1Sdram) )
-				CHECK_STATUS(preprocessing_getMask(masksSdram, ROWS, COLS, ir, tmp2Sdram) )
-
-				CHECK_STATUS(preprocessing_arith_doGetConst(img01Sdram, img02Sdram, tmp1Sdram, tmp2Sdram, tmp3Sdram, tmp4Sdram, tmp5Sdram, ROWS, COLS, dx, dy, consSdram, pixConSdram) )
-
-				CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp1Sdram))
-				CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp2Sdram))
-				CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp3Sdram))
-				CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp4Sdram))
-				CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp5Sdram))
+			if(i==0){
+				xO = tmp3[0];
+				yO = tmp3[1];
 			}
+
+			int x = xO - tmp3[i*COORDS_COLS];
+			int y = yO - tmp3[i*COORDS_COLS+1];
+			printf("Image %d:\tx: %d\ty: %d\n", i, x, y);
 	}
-	printf("\n------------------------------------------------\n");
-	printf("---------Const calculates successfully---------\n");
-	printf("------------------------------------------------\n");
-	//END CONST
-
-	CHECK_STATUS(preprocessing_arith_equalImages(consSdram, ROWS, COLS, tmp1Sdram))
-	CHECK_STATUS(preprocessing_arith_normalicer(tmp1Sdram, pixConSdram, ROWS, COLS, tmp1Sdram))
 
 
-	//ITERA
-	CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp2Sdram))
-	CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp3Sdram))
-	CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp4Sdram))
-	CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp5Sdram))
-	CHECK_STATUS(preprocessing_zero(ROWS, COLS, tmp6Sdram))
+	printf("\nCoords:\n");
 
-	printf("\n------------------------------------------------\n");
-	printf("-----------------Calculate Itera-----------------\n");
-	printf("------------------------------------------------\n");
-	CHECK_STATUS(preprocessing_arith_iterate(consSdram, masksSdram, pixConSdram, dispSdram,
-			tmp2Sdram, tmp3Sdram, tmp4Sdram, tmp5Sdram, tmp6Sdram,
-			ROWS, COLS, LOOPS_ITERA, tmp1Sdram))
-	printf("\n------------------------------------------------\n");
-	printf("----------Itera calculated successfully----------\n");
-	printf("------------------------------------------------\n");
+	for(unsigned int i = 0; i < NUMBER_OF_IMAGES; i++){
 
-	//END ITERA
+		int x = xO - (tmp3[i*COORDS_COLS] + (WINDOW_WIDTH/2));
+		int y = yO - (tmp3[i*COORDS_COLS+1] + (WINDOW_HEIGHT/2));
+		printf("Image %d:\tx: %d\ty: %d\n", i, x, y);
+	}
 
-	writeImageToFile(cons, "const.fits", -1, 0, stdimagesize );
-	writeImageToFile(pixCon, "pixCon.fits", -1, 0, stdimagesize );
-	writeImageToFile(tmp1, "Gain.fits", -1, 0, stdimagesize );
+
+
 
 	printf("Done!\n");
 	return 1;
